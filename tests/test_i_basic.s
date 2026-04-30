@@ -1,0 +1,12 @@
+ADDI  X0, XZR, #10
+ADDI  X1, X0,  #5
+
+SUBI  X2, X1,  #3
+SUBIS X3, X2,  #4
+
+ANDI  X4, X3, #7
+ORRI  X5, X4, #16
+EORI  X6, X5, #-8
+
+HALT
+

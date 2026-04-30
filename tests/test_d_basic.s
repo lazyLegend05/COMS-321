@@ -1,0 +1,12 @@
+ADDI  X0, XZR, #0
+
+ADDI  X1, XZR, #42
+STUR  X1, [X0, #8]
+LDUR  X2, [X0, #8]
+
+ADDI  X3, XZR, #100
+STUR  X3, [X0, #-16]
+LDUR  X4, [X0, #-16]
+
+HALT
+
