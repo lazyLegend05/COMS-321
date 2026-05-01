@@ -33,13 +33,6 @@ public class Disasm {
             System.exit(1);
         }
     }
-
-    /*
-     * Person 1 part:
-     * Read binary file.
-     * Every 4 bytes become one 32-bit instruction.
-     * Input is big-endian, so byte[0] is the most significant byte.
-     */
     static List<Integer> readProgram(String filename) throws IOException {
         byte[] data = Files.readAllBytes(Paths.get(filename));
 
@@ -62,11 +55,6 @@ public class Disasm {
         return instructions;
     }
 
-    /*
-     * Person 3 important part:
-     * First pass over the program.
-     * Find all branch targets and assign generated labels.
-     */
     static Map<Integer, String> buildLabelMap(List<Integer> instructions) {
         Map<Integer, String> labels = new LinkedHashMap<>();
         int labelNum = 1;
@@ -85,23 +73,14 @@ public class Disasm {
 
         return labels;
     }
-
-    /*
-     * Returns the target instruction index for branch instructions.
-     * Returns null if the instruction is not a branch that uses a label.
-     */
     static Integer getBranchTargetIndex(int inst, int currentIndex) {
         int op6 = (inst >>> 26) & 0x3F;
         int op8 = (inst >>> 24) & 0xFF;
-
-        // B and BL use signed 26-bit instruction offset.
         if (op6 == 0x05 || op6 == 0x25) {
             int imm26 = inst & 0x03FFFFFF;
             int offset = signExtend(imm26, 26);
             return currentIndex + offset;
         }
-
-        // B.cond, CBZ, and CBNZ use signed 19-bit instruction offset.
         if (op8 == 0x54 || op8 == 0xB4 || op8 == 0xB5) {
             int imm19 = (inst >>> 5) & 0x7FFFF;
             int offset = signExtend(imm19, 19);
@@ -110,20 +89,11 @@ public class Disasm {
 
         return null;
     }
-
-    /*
-     * Person 2 + Person 3 combined:
-     * Decode the instruction fields and format the final LEGv8 assembly line.
-     */
     static String formatInstruction(int inst, int currentIndex, Map<Integer, String> labels) {
         int op6 = (inst >>> 26) & 0x3F;
         int op8 = (inst >>> 24) & 0xFF;
         int op10 = (inst >>> 22) & 0x3FF;
         int op11 = (inst >>> 21) & 0x7FF;
-
-        /*
-         * B-format instructions
-         */
         if (op6 == 0x05) {
             int imm26 = inst & 0x03FFFFFF;
             int offset = signExtend(imm26, 26);
@@ -137,10 +107,6 @@ public class Disasm {
             int target = currentIndex + offset;
             return "BL " + labelOrFallback(labels, target, offset);
         }
-
-        /*
-         * CB-format instructions
-         */
         if (op8 == 0x54) {
             int imm19 = (inst >>> 5) & 0x7FFFF;
             int offset = signExtend(imm19, 19);
@@ -167,10 +133,6 @@ public class Disasm {
 
             return "CBNZ " + reg(rt) + ", " + labelOrFallback(labels, target, offset);
         }
-
-        /*
-         * D-format instructions
-         */
         if (op11 == 0x7C2) {
             int rt = inst & 0x1F;
             int rn = (inst >>> 5) & 0x1F;
@@ -186,18 +148,10 @@ public class Disasm {
 
             return "STUR " + reg(rt) + ", [" + reg(rn) + ", #" + address + "]";
         }
-
-        /*
-         * BR instruction
-         */
         if (op11 == 0x6B0) {
             int rn = (inst >>> 5) & 0x1F;
             return "BR " + reg(rn);
         }
-
-        /*
-         * Special emulator instructions
-         */
         if (op11 == 0x7FD) {
             int rd = inst & 0x1F;
             return "PRNT " + reg(rd);
@@ -214,10 +168,6 @@ public class Disasm {
         if (op11 == 0x7FF) {
             return "HALT";
         }
-
-        /*
-         * R-format instructions
-         */
         if (op11 == 0x458) {
             return formatR("ADD", inst);
         }
@@ -245,10 +195,6 @@ public class Disasm {
         if (op11 == 0x4D8) {
             return formatR("MUL", inst);
         }
-
-        /*
-         * Shift instructions
-         */
         if (op11 == 0x69B) {
             int rd = inst & 0x1F;
             int rn = (inst >>> 5) & 0x1F;
@@ -264,11 +210,6 @@ public class Disasm {
 
             return "LSR " + reg(rd) + ", " + reg(rn) + ", #" + shamt;
         }
-
-        /*
-         * I-format instructions
-         * Immediate is 12-bit unsigned for these supported LEGv8 I-format instructions.
-         */
         if (op10 == 0x244) {
             return formatI("ADDI", inst);
         }
@@ -292,10 +233,6 @@ public class Disasm {
         if (op10 == 0x348) {
             return formatI("EORI", inst);
         }
-
-        /*
-         * Should not happen if input only contains supported assignment instructions.
-         */
         return ".word 0x" + String.format("%08X", inst);
     }
 
@@ -332,9 +269,6 @@ public class Disasm {
         if (labels.containsKey(target)) {
             return labels.get(target);
         }
-
-        // This fallback should rarely be used for valid assignment inputs.
-        // It exists so the disassembler still prints something understandable.
         return "#" + offset;
     }
 
